@@ -55,3 +55,31 @@ def load_div2k_images(scale=4):
 
     return lr_images, hr_images
 
+def load_custom_images(data_path, scale=4):
+    """
+    Carga y preprocesa imágenes desde un directorio personalizado.
+    
+    Lee las imágenes en formato PNG desde el directorio especificado y las preprocesa
+    para crear imágenes de baja resolución simuladas.
+    
+    Args:
+        data_path (str): Ruta al directorio que contiene las imágenes personalizadas.
+        scale (int): Factor de escala para la reducción de resolución. Por defecto es 4.
+        
+    Returns:
+        tuple: Una tupla de dos tensores; el primero contiene imágenes de baja resolución,
+               y el segundo contiene imágenes de alta resolución.
+    """
+    
+    # Obtener las rutas de las imágenes en el directorio personalizado
+    image_paths = [os.path.join(data_path, f) for f in os.listdir(data_path) if f.endswith('.png')]
+    # Leer y decodificar las imágenes
+    images = [tf.image.decode_image(tf.io.read_file(img_path)) for img_path in image_paths]
+    # Convertir la lista de imágenes en un tensor
+    images = tf.stack(images)
+
+    # Preparar las imágenes de alta y baja resolución
+    hr_images = images
+    lr_images = tf.map_fn(lambda img: preprocess_image(img, scale), hr_images, dtype=tf.float32)
+
+    return lr_images, hr_images
