@@ -26,7 +26,7 @@ def preprocess_image(image, scale=4):
     """
     return lr_image
 
-def load_div2k_images(scale=4):
+def load_div2k_images(scale=4, target_size=(360, 640)):
     """
     Carga y preprocesa el dataset DIV2K usando TensorFlow Datasets.
     
@@ -40,19 +40,25 @@ def load_div2k_images(scale=4):
                y el segundo contiene imágenes de alta resolución.
     """
 
-    # Cargar el dataset DIV2K
-    dataset, info = tfds.load('div2k/4x', with_info=True, as_supervised=True, split='train+validation', shuffle_files=True, batch_size=-1)
+    # Cargar el dataset DIV2K con una configuración válida, como 'bicubic_x4'
+    dataset, info = tfds.load('div2k/bicubic_x4', with_info=True, as_supervised=True, split='train+validation', shuffle_files=True)
     
-    # Obtener las imágenes del dataset
-    images = dataset['image']
-    # Convertir las imágenes a valores de punto flotante en el rango [0, 1]
-    images = tf.image.convert_image_dtype(images, dtype=tf.float32)
+    # Desempaquetar las imágenes de baja resolución (LR) y alta resolución (HR)
+    lr_images, hr_images = [], []
+    
+    for lr_image, hr_image in dataset:
+        # Redimensionar las imágenes al tamaño objetivo
+        lr_image = tf.image.resize(lr_image, target_size, method='bicubic')
+        hr_image = tf.image.resize(hr_image, target_size, method='bicubic')
 
-    # Preparar las imágenes de alta y baja resolución
-    hr_images = images
-    # tf.map_fn: Es una función de TensorFlow que aplica una función dada a cada elemento en un tensor a lo largo de un eje específico.
-    lr_images = tf.map_fn(lambda img: preprocess_image(img, scale), hr_images, dtype=tf.float32)
+        # Convertir las imágenes a valores de punto flotante en el rango [0, 1]
+        lr_images.append(tf.image.convert_image_dtype(lr_image, dtype=tf.float32))
+        hr_images.append(tf.image.convert_image_dtype(hr_image, dtype=tf.float32))
 
+    # Convertir las listas a tensores
+    lr_images = tf.stack(lr_images)
+    hr_images = tf.stack(hr_images)
+    
     return lr_images, hr_images
 
 def load_custom_images(data_path, scale=4):
